@@ -2,13 +2,22 @@
 <html>
 <head>
 <meta charset="ISO-8859-1">
-<script type="text/javascript" src="CalendarScript.js"></script>
 <title>Calendar Exercise</title>
 </head>
-<body onLoad="displayMonths()">
-	<div id="monthList"></div>
-	<hr>
-	<button onclick="alphabetize()">Alphabetize</button>
-	<button onclick="numerical()">Numerical</button>
+
+<body>
+	<div id="main">
+		<div id="month-list"></div>
+		<hr>
+		<button id="alpha-btn">Alphabetize</button>
+		<button id="num-btn">Numerical</button>
+	</div>
+	
+ 	<script type="text/javascript" src="json2.js"></script>
+	<script type="text/javascript" src="jquery.js"></script>
+  	<script type="text/javascript" src="underscore.js"></script>
+	<script type="text/javascript" src="backbone.js"></script>
+	<script type="text/javascript" src="backbone.localStorage.js"></script>
+	<script type="text/javascript" src="CalendarScript.js"></script>
 </body>
 </html>

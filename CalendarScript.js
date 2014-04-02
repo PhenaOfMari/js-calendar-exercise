@@ -1,81 +1,117 @@
-// Define the month object
-function Month() {
-	this.name = "";
-	this.number = NaN;
-}
-
-//Define the year collection
-var year = [];
-
-// Define the months of the year and add them to the year collection
-var jan = new Month; jan.name = "January"; jan.number = 1; year.push(jan);
-var feb = new Month; feb.name = "February"; feb.number = 2; year.push(feb);
-var mar = new Month; mar.name = "March"; mar.number = 3; year.push(mar);
-var apr = new Month; apr.name = "April"; apr.number = 4; year.push(apr);
-var may = new Month; may.name = "May"; may.number = 5; year.push(may);
-var jun = new Month; jun.name = "June"; jun.number = 6; year.push(jun);
-var jul = new Month; jul.name = "July"; jul.number = 7; year.push(jul);
-var aug = new Month; aug.name = "August"; aug.number = 8; year.push(aug);
-var sep = new Month; sep.name = "September"; sep.number = 9; year.push(sep);
-var oct = new Month; oct.name = "October"; oct.number = 10; year.push(oct);
-var nov = new Month; nov.name = "November"; nov.number = 11; year.push(nov);
-var dec = new Month; dec.name = "December"; dec.number = 12; year.push(dec);
-
-// Sort year based on month name
-function alphabetize(){
-	year.sort(function(a,b){return a.name.localeCompare(b.name);});
-	refreshDisplay();
-}
-
-// Sort year based on month number
-function numerical(){
-	year.sort(function(a,b){return a.number-b.number;});
-	refreshDisplay();
-}
-
-// Adds the properly colored months to the display
-function displayMonths(){
-	var monthList = document.getElementById("monthList");
-	
-	for(var i = 0; i < year.length ; i++){
-		var monthDiv = document.createElement("div");
-		// Set month object to an attribute in the div for use in the click event
-		monthDiv.month = year[i];
-		monthDiv.innerHTML = year[i].name;
-		// Check if this month is the current month and display it in red if it is, otherwise blue
-		if(year[i] == BirthdayMonth.getMonth()){
-			monthDiv.setAttribute("style", "background-color:red;border-style:solid;border-width:1px");
-		} else {
-			monthDiv.setAttribute("style", "background-color:deepskyblue;border-style:solid;border-width:1px");
+$(function(){
+	// Define the month object
+	var month = Backbone.Model.extend({
+		defaults: function(){
+			return {
+				name: "",
+				number: NaN,
+				current: false
+			};
+		},
+		update: function(){
+			this.save({current: BirthdayMonth.getMonth() == this.get("name")});
 		}
-		monthDiv.addEventListener("click", clickListener, false);
-		monthList.appendChild(monthDiv);
-	}
-}
-
-// Triggers when a month is clicked
-// Sets the current month to the one that was clicked and refreshes the display.
-function clickListener(e){
-	BirthdayMonth.setMonth(e.target.month);
-	refreshDisplay();
-}
-
-// Removes the months from the display and calls displayMonths() again to have them appear in the proper order
-function refreshDisplay(){
-	var monthList = document.getElementById("monthList");
-	while(monthList.hasChildNodes()){
-		// Remove listeners from the node before removing it altogether
-		monthList.firstChild.removeEventListener("click", clickListener, false);
-		monthList.removeChild(monthList.firstChild);
-	}
+	});
 	
-	displayMonths();
-}
+	// Define the year collection
+	var yearBackbone = Backbone.Collection.extend({
+		model: month,
+		localStorage: new Backbone.LocalStorage("year-backbone"),
+		// Sorts the collection by name
+		alphabetize: function(){
+			this.comparator = 'name';
+			this.sort();
+		},
+		// Sorts the collection by number
+		numerical: function(){
+			this.comparator = 'number';
+			this.sort();
+		},
+		comparator: 'number'
+	});
+	// Create a global instance of a year to use in the app
+	var year = new yearBackbone;
+	
+	// Create a view for the year
+	var yearView = Backbone.View.extend({
+		tagName: "div",
+		template: _.template("<div class='monthItem' style='background-color:<%= current ? 'red' : 'deepskyblue' %>;border-style:solid;border-width:1px'><%- name %></div>"),//template: _.template($('#item-template').html()),
+		events: {
+			"click .monthItem" : "setCurrent"
+		},
+		initialize: function(){
+			this.listenTo(this.model, 'change', this.render);
+			this.listenTo(this.model, 'destroy', this.remove);
+		},
+		render: function(){
+			this.$el.html(this.template(this.model.toJSON()));
+			return this;
+		},
+		isCurrent: function(){
+			return BirthdayMonth.getMonth() == this.model.get('name');
+		},
+		// Sets the current month to the one that was clicked
+		setCurrent: function(){
+			BirthdayMonth.setMonth(this.model.get('name'));
+			year.each(function(model, index){model.update();}, this);
+		}
+	});
+	
+	var appView = Backbone.View.extend({
+		el: $("#main"),
+		events: {
+			"click #alpha-btn": "alphabetize",
+			"click #num-btn": "numerical"
+		},
+		initialize: function(){
+			year.reset();
+			this.listenTo(year, 'add', this.add);
+			this.listenTo(year, 'sort', this.refresh);
+			
+			// Define the months of the year and add them to the year collection
+			year.create({name: "January", number: 1});
+			year.create({name: "February", number: 2});
+			year.create({name: "March", number: 3});
+			year.create({name: "April", number: 4});
+			year.create({name: "May", number: 5});
+			year.create({name: "June", number: 6});
+			year.create({name: "July", number: 7});
+			year.create({name: "August", number: 8});
+			year.create({name: "September", number: 9});
+			year.create({name: "October", number: 10});
+			year.create({name: "November", number: 11});
+			year.create({name: "December", number: 12});
+			//Set April to current month and update the list
+			BirthdayMonth.setMonth("April");
+			year.each(function(model, index){model.update();}, this);
+		},
+		add: function(month){
+			var view = new yearView({model: month});
+			this.$("#month-list").append(view.render().el);
+		},
+		refresh: function(){
+			while($("#month-list")[0].firstChild){
+				$("#month-list")[0].removeChild($("#month-list")[0].firstChild);
+			};
+			year.each(this.add, this);
+		},
+		// Handler for the Alphabetize button
+		alphabetize: function(){
+			year.alphabetize();
+		},
+		// Handler for the Numerical button
+		numerical: function(){
+			year.numerical();
+		}
+	});
+	
+	var app = new appView;
+});
 
-// BirthdayMonth module pattern
+//BirthdayMonth module pattern
 var BirthdayMonth = (function(){
 	// private variable that stores the current month, defaults to April (my birth month)
-	var currentMonth = apr;
+	var currentMonth = null;
 	
 	// public functions
 	return {
@@ -86,7 +122,7 @@ var BirthdayMonth = (function(){
 		// Sets the current month
 		setMonth:function(newMonth){
 			currentMonth = newMonth;
-			console.log(newMonth.name + " has been set to the new birth month.");
+			console.log(newMonth + " has been set to the new birth month.");
 		}
 	};
 }());
